@@ -1,4 +1,5 @@
 #import "../common.h"
+#import <Preferences/PSSpecifier.h>
 
 @interface BKGPApplicationListSubcontrollerController : UIViewController <UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating>
 {
@@ -9,6 +10,7 @@
     UITableView *_appTableView;
     UISearchController *_searchController;
 }
+@property (nonatomic, strong) PSSpecifier *specifier;
 - (void)updateIvars;
 - (void)loadPreferences;
 @end

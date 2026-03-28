@@ -1,7 +1,6 @@
 #import "BKGPApplicationListSubcontrollerController.h"
 #import "BKGPAppEntryController.h"
 #import "../BKGShared.h"
-#import <Preferences/PSSpecifier.h>
 #import <objc/runtime.h>
 
 // LSApplicationProxy 私有 API 声明
@@ -102,18 +101,26 @@ static void refreshSpecifiers_appList() {
     [[NSNotificationCenter defaultCenter] postNotificationName:RELOAD_SPECIFIERS_LOCAL_NOTIFICATION_NAME object:nil];
 }
 
-- (instancetype)init {
+static void BKGPRegisterAppListObservers(BKGPApplicationListSubcontrollerController *controller) {
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)refreshSpecifiers_appList, (CFStringRef)RELOAD_SPECIFIERS_NOTIFICATION_NAME, NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+    [[NSNotificationCenter defaultCenter] addObserver:controller selector:@selector(refreshSpecifiers:) name:RELOAD_SPECIFIERS_LOCAL_NOTIFICATION_NAME object:nil];
+}
+
+- (instancetype)initWithStyle:(UITableViewStyle)style {
     if ((self = [super init])) {
-        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)refreshSpecifiers_appList, (CFStringRef)RELOAD_SPECIFIERS_NOTIFICATION_NAME, NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshSpecifiers:) name:RELOAD_SPECIFIERS_LOCAL_NOTIFICATION_NAME object:nil];
+        (void)style;
+        BKGPRegisterAppListObservers(self);
     }
     return self;
 }
 
+- (instancetype)init {
+    return [self initWithStyle:UITableViewStyleGrouped];
+}
+
 - (instancetype)initWithSpecifier:(PSSpecifier *)specifier {
-    if ((self = [super init])) {
-        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)refreshSpecifiers_appList, (CFStringRef)RELOAD_SPECIFIERS_NOTIFICATION_NAME, NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(refreshSpecifiers:) name:RELOAD_SPECIFIERS_LOCAL_NOTIFICATION_NAME object:nil];
+    if ((self = [self initWithStyle:UITableViewStyleGrouped])) {
+        self.specifier = specifier;
     }
     return self;
 }
