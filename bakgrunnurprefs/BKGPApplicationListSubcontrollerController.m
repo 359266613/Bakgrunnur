@@ -50,7 +50,7 @@
         _bundleIdLabel.textColor = [UIColor secondaryLabelColor];
         [self.contentView addSubview:_bundleIdLabel];
 
-        // 状态标签（已启用）
+        // 状态标签
         _statusLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         _statusLabel.font = [UIFont systemFontOfSize:10 weight:UIFontWeightSemibold];
         _statusLabel.textColor = [UIColor whiteColor];
@@ -124,7 +124,7 @@ static void refreshSpecifiers_appList() {
     [_appTableView reloadData];
 }
 
-#pragma mark - Preferences
+#pragma mark - Preferences Data
 
 - (void)updateIvars {
     _prefs = [getPrefs() ?: @{} mutableCopy];
@@ -138,6 +138,7 @@ static void refreshSpecifiers_appList() {
 #pragma mark - View Lifecycle
 
 - (void)viewDidLoad {
+    [super loadPageContentView]; // PSListController 内部方法可能会用到
     [super viewDidLoad];
     [self loadPreferences];
     self.title = @"管理应用";
@@ -155,15 +156,18 @@ static void refreshSpecifiers_appList() {
     self.navigationItem.hidesSearchBarWhenScrolling = YES;
     self.definesPresentationContext = YES;
 
-    // TableView（覆盖 PSListController 的 table）
+    // TableView
     _appTableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
     _appTableView.delegate = self;
     _appTableView.dataSource = self;
     _appTableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _appTableView.rowHeight = 60;
-    _appTableView.estimatedRowHeight = 60;
     [_appTableView registerClass:[BKGAppCell class] forCellReuseIdentifier:@"BKGAppCell"];
     [self.view addSubview:_appTableView];
+}
+
+- (void)loadPageContentView {
+    // 覆盖以避免 PSListController 默认创建不需要的 table 布局
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -172,22 +176,16 @@ static void refreshSpecifiers_appList() {
     [_appTableView reloadData];
 }
 
-#pragma mark - App 数据加载
+#pragma mark - App Data Loading
 
 - (NSArray *)loadInstalledApplications {
     NSMutableArray *apps = [NSMutableArray array];
-
     Class LSWorkspaceClass = NSClassFromString(@"LSApplicationWorkspace");
-    if (!LSWorkspaceClass) {
-        return @[];
-    }
+    if (!LSWorkspaceClass) return @[];
     id workspace = [LSWorkspaceClass performSelector:@selector(defaultWorkspace)];
-    if (!workspace) {
-        return @[];
-    }
+    if (!workspace) return @[];
 
     NSArray *proxies = nil;
-    // 优先 allApplications（包含系统 + 用户），用 allInstalledApplications 作备选
     if ([workspace respondsToSelector:@selector(allApplications)]) {
         proxies = [workspace performSelector:@selector(allApplications)];
     }
@@ -196,37 +194,19 @@ static void refreshSpecifiers_appList() {
     }
 
     for (id proxy in proxies) {
-        NSString *bundleId = nil;
-        NSString *name = nil;
+        NSString *bundleId = [proxy respondsToSelector:@selector(bundleIdentifier)] ? [proxy bundleIdentifier] : nil;
+        NSString *name = [proxy respondsToSelector:@selector(localizedName)] ? [proxy localizedName] : nil;
         UIImage *icon = nil;
-
-        if ([proxy respondsToSelector:@selector(bundleIdentifier)]) {
-            bundleId = [proxy bundleIdentifier];
-        }
-        if ([proxy respondsToSelector:@selector(localizedName)]) {
-            name = [proxy localizedName];
-        }
-        // iconImageWithFormat: 20 = 60x60
         if ([proxy respondsToSelector:@selector(iconImageWithFormat:)]) {
-            @try {
-                icon = [proxy iconImageWithFormat:10];
-            } @catch (NSException *e) {}
+            @try { icon = [proxy iconImageWithFormat:10]; } @catch (NSException *e) {}
         }
-
         if (bundleId.length > 0 && name.length > 0) {
-            [apps addObject:@{
-                @"bundleId": bundleId,
-                @"name": name,
-                @"icon": icon ?: [NSNull null],
-            }];
+            [apps addObject:@{ @"bundleId": bundleId, @"name": name, @"icon": icon ?: [NSNull null] }];
         }
     }
-
-    // 按名称排序
     [apps sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
         return [a[@"name"] localizedCaseInsensitiveCompare:b[@"name"]];
     }];
-
     return [apps copy];
 }
 
@@ -237,8 +217,7 @@ static void refreshSpecifiers_appList() {
     if (keyword.length == 0) {
         _filteredApps = _allApps;
     } else {
-        NSPredicate *pred = [NSPredicate predicateWithFormat:
-                             @"name CONTAINS[cd] %@ OR bundleId CONTAINS[cd] %@", keyword, keyword];
+        NSPredicate *pred = [NSPredicate predicateWithFormat:@"name CONTAINS[cd] %@ OR bundleId CONTAINS[cd] %@", keyword, keyword];
         _filteredApps = [_allApps filteredArrayUsingPredicate:pred];
     }
     [_appTableView reloadData];
@@ -246,27 +225,18 @@ static void refreshSpecifiers_appList() {
 
 #pragma mark - UITableViewDataSource
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 1;
-}
-
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return (NSInteger)_filteredApps.count;
-}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 1; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return (NSInteger)_filteredApps.count; }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     BKGAppCell *cell = [tableView dequeueReusableCellWithIdentifier:@"BKGAppCell" forIndexPath:indexPath];
-
     NSDictionary *appInfo = _filteredApps[indexPath.row];
     NSString *bundleId = appInfo[@"bundleId"];
     NSString *name = appInfo[@"name"];
     id iconObj = appInfo[@"icon"];
     UIImage *icon = [iconObj isKindOfClass:[UIImage class]] ? iconObj : nil;
-
-    // 判断是否已启用
     BOOL isEnabled = [_allEntriesIdentifier containsObject:bundleId];
     [cell configureWithName:name bundleId:bundleId icon:icon isEnabled:isEnabled];
-
     return cell;
 }
 
@@ -274,19 +244,11 @@ static void refreshSpecifiers_appList() {
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
-
     NSDictionary *appInfo = _filteredApps[indexPath.row];
     NSString *bundleId = appInfo[@"bundleId"];
     NSString *name = appInfo[@"name"];
 
-    // 构建 specifier，将 identifier 和 label 传给 BKGPAppEntryController
-    PSSpecifier *specifier = [PSSpecifier preferenceSpecifierNamed:name
-                                                           target:nil
-                                                              set:nil
-                                                              get:nil
-                                                           detail:nil
-                                                             cell:PSLinkCell
-                                                             edit:nil];
+    PSSpecifier *specifier = [PSSpecifier preferenceSpecifierNamed:name target:nil set:nil get:nil detail:nil cell:PSLinkCell edit:nil];
     specifier.identifier = bundleId;
     [specifier setProperty:name forKey:@"label"];
     [specifier setProperty:bundleId forKey:@"id"];
@@ -294,18 +256,12 @@ static void refreshSpecifiers_appList() {
     BKGPAppEntryController *entryController = [[BKGPAppEntryController alloc] initWithSpecifier:specifier];
     entryController.specifier = specifier;
     entryController.title = name;
-
     [self.navigationController pushViewController:entryController animated:YES];
 }
 
-- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-    return 60.0;
-}
-
-#pragma mark - PSListController overrides (保持兼容)
+#pragma mark - PSListController overrides
 
 - (NSArray *)specifiers {
-    // 本控制器使用自定义 UITableView，不使用 PSListController 的 specifiers 系统
     if (!_specifiers) {
         _specifiers = [NSMutableArray array];
     }
@@ -317,18 +273,10 @@ static void refreshSpecifiers_appList() {
     [_appTableView reloadData];
 }
 
-#pragma mark - 供 BKGPAppEntryController 回调刷新
+#pragma mark - Entry Callbacks
 
--(NSArray *)getAllEntries:(NSString *)keyName keyIdentifier:(NSString *)keyIdentifier{
-    NSArray *arrayWithEventID = [_prefs[keyName] valueForKey:keyIdentifier];
-    return arrayWithEventID;
-}
-
--(void)updateParentReload {
-    [self updateIvars];
-    [_appTableView reloadData];
-}
-
+-(NSArray *)getAllEntries:(NSString *)keyName keyIdentifier:(NSString *)keyIdentifier {
+    return [_prefs[keyName] valueForKey:keyIdentifier];
 }
 
 @end
