@@ -307,7 +307,7 @@ static void refreshSpecifiers_appList() {
 - (NSArray *)specifiers {
     // 本控制器使用自定义 UITableView，不使用 PSListController 的 specifiers 系统
     if (!_specifiers) {
-        _specifiers = @[];
+        _specifiers = [NSMutableArray array];
     }
     return _specifiers;
 }

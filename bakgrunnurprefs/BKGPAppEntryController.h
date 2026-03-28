@@ -19,6 +19,7 @@
 }
 @property (nonatomic, retain) NSString *identifier;
 @property (nonatomic, retain) NSString *appName;
+- (instancetype)initWithSpecifier:(PSSpecifier *)specifier;
 -(void)updateParentViewController;
 @end
 
