@@ -4,6 +4,10 @@
 #import "BKGPApplicationListSubcontrollerController.h"
 #import "NSString+Regex.h"
 
+@interface BKGPApplicationListSubcontrollerController (BKGPAppEntryReload)
+- (void)reloadSpecifiers;
+@end
+
 @implementation BKGPAppEntryController
 
 static void refreshSpecifiers() {

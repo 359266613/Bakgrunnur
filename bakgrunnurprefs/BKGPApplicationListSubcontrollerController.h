@@ -11,5 +11,4 @@
 }
 - (void)updateIvars;
 - (void)loadPreferences;
-- (void)reloadSpecifiers;
 @end
