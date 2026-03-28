@@ -138,7 +138,6 @@ static void refreshSpecifiers_appList() {
 #pragma mark - View Lifecycle
 
 - (void)viewDidLoad {
-    [super loadPageContentView]; // PSListController 内部方法可能会用到
     [super viewDidLoad];
     [self loadPreferences];
     self.title = @"管理应用";
@@ -164,10 +163,6 @@ static void refreshSpecifiers_appList() {
     _appTableView.rowHeight = 60;
     [_appTableView registerClass:[BKGAppCell class] forCellReuseIdentifier:@"BKGAppCell"];
     [self.view addSubview:_appTableView];
-}
-
-- (void)loadPageContentView {
-    // 覆盖以避免 PSListController 默认创建不需要的 table 布局
 }
 
 - (void)viewWillAppear:(BOOL)animated {
