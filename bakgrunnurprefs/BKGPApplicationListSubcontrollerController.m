@@ -125,6 +125,17 @@ static void BKGPRegisterAppListObservers(BKGPApplicationListSubcontrollerControl
     return self;
 }
 
+- (instancetype)initForContentSize:(CGSize)contentSize {
+    if ((self = [self initWithStyle:UITableViewStyleGrouped])) {
+        (void)contentSize;
+    }
+    return self;
+}
+
+- (NSBundle *)bundle {
+    return [NSBundle bundleForClass:[BKGPApplicationListSubcontrollerController class]];
+}
+
 - (void)refreshSpecifiers:(NSNotification *)notification {
     [self updateIvars];
     [_appTableView reloadData];

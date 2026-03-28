@@ -11,6 +11,8 @@
     UISearchController *_searchController;
 }
 @property (nonatomic, strong) PSSpecifier *specifier;
+@property (nonatomic, weak) id parentController;
+@property (nonatomic, weak) id rootController;
 - (void)updateIvars;
 - (void)loadPreferences;
 @end
