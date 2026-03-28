@@ -1,8 +1,6 @@
 #import "../common.h"
-#import <Preferences/PSListController.h>
-#import <Preferences/PSSpecifier.h>
 
-@interface BKGPApplicationListSubcontrollerController : PSListController <UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating>
+@interface BKGPApplicationListSubcontrollerController : UIViewController <UITableViewDelegate, UITableViewDataSource, UISearchResultsUpdating>
 {
     NSMutableDictionary *_prefs;
     NSArray *_allEntriesIdentifier;

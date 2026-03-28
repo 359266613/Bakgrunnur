@@ -1,7 +1,6 @@
 #import "BKGPApplicationListSubcontrollerController.h"
 #import "BKGPAppEntryController.h"
 #import "../BKGShared.h"
-#import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 #import <objc/runtime.h>
 
@@ -252,15 +251,6 @@ static void refreshSpecifiers_appList() {
     entryController.specifier = specifier;
     entryController.title = name;
     [self.navigationController pushViewController:entryController animated:YES];
-}
-
-#pragma mark - PSListController overrides
-
-- (NSArray *)specifiers {
-    if (!_specifiers) {
-        _specifiers = [NSMutableArray array];
-    }
-    return _specifiers;
 }
 
 - (void)reloadSpecifiers {
