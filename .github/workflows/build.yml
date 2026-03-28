@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - '.github/workflows/build.yml'
+      - 'Bakgrunnur.xm'
+      - 'control'
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Use Theos Setup Action
+        uses: axs66/theos-action@main
+
+      - name: Clean previous packages
+        run: rm -f ${{ github.workspace }}/packages/*.deb
+
+      - name: Build DEB (rootless + roothide)
+        run: |
+          make clean
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
+
+      - name: List generated DEBs
+        run: ls -lh ${{ github.workspace }}/packages
+
+      - name: Create GitHub Release
+        run: |
+          VERSION=$(date +v%Y%m%d%H%M)
+          gh release create $VERSION ${{ github.workspace }}/packages/*.deb --title "bakgrunnur $VERSION" --notes "自动构建 .deb 安装包"
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+
+      - name: Upload DEB to workflow artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: bakgrunnur
+          path: ${{ github.workspace }}/packages/*.deb

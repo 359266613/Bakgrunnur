@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Rootless 版 Bakgrunnur 安装脚本
+# 注意：所有路径都必须加上 /var/jb 前缀
+
+echo "[Bakgrunnur] Setting up daemon..."
+
+# 设置二进制执行权限
+chown root:wheel /var/jb/usr/libexec/bkgd
+chmod 755 /var/jb/usr/libexec/bkgd
+
+# 设置 LaunchDaemon 配置文件权限
+chown root:wheel /var/jb/Library/LaunchDaemons/com.udevs.bkgd.plist
+chmod 644 /var/jb/Library/LaunchDaemons/com.udevs.bkgd.plist
+
+# 重新加载守护进程（Rootless 环境下必须使用 /var/jb 前缀）
+launchctl bootstrap system /var/jb/Library/LaunchDaemons/com.udevs.bkgd.plist 2>/dev/null || true
+
+echo "[Bakgrunnur] Daemon installed and loaded."
+
+exit 0
